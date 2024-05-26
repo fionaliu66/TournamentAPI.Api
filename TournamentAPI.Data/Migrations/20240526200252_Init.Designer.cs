@@ -12,7 +12,7 @@ using TournamentAPI.Data.Data;
 namespace TournamentAPI.Data.Migrations
 {
     [DbContext(typeof(TournamentAPIApiContext))]
-    [Migration("20240523220121_Init")]
+    [Migration("20240526200252_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -47,7 +47,7 @@ namespace TournamentAPI.Data.Migrations
 
                     b.HasIndex("TournamentId");
 
-                    b.ToTable("Game");
+                    b.ToTable("Games");
                 });
 
             modelBuilder.Entity("TournamentAPI.Core.Entities.Tournament", b =>
@@ -67,7 +67,7 @@ namespace TournamentAPI.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tournament");
+                    b.ToTable("Tournaments");
                 });
 
             modelBuilder.Entity("TournamentAPI.Core.Entities.Game", b =>

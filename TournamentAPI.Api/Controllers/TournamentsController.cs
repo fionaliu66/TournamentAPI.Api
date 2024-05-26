@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TournamentAPI.Data.Data;
 using TournamentAPI.Core.Entities;
+using TournamentAPI.Data.Repositories;
+using TournamentAPI.Core.Repositories;
 
 namespace TournamentAPI.Api.Controllers
 {
@@ -14,25 +16,26 @@ namespace TournamentAPI.Api.Controllers
     [ApiController]
     public class TournamentsController : ControllerBase
     {
-        private readonly TournamentAPIApiContext _context;
+        private readonly UnitOfWork unitOfWork;
 
         public TournamentsController(TournamentAPIApiContext context)
         {
-            _context = context;
+            unitOfWork = new UnitOfWork(context);
         }
 
         // GET: api/Tournaments
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Tournament>>> GetTournament()
         {
-            return await _context.Tournament.ToListAsync();
+            var tournaments =  await unitOfWork.TournamentRepository.GetAllAsync();
+            return Ok(tournaments);
         }
 
         // GET: api/Tournaments/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Tournament>> GetTournament(int id)
         {
-            var tournament = await _context.Tournament.FindAsync(id);
+            var tournament = await unitOfWork.TournamentRepository.GetAsync(id);
 
             if (tournament == null)
             {
@@ -49,14 +52,23 @@ namespace TournamentAPI.Api.Controllers
         {
             if (id != tournament.Id)
             {
-                return BadRequest();
+                return BadRequest("ID in URL does not match ID in the body.");
             }
 
-            _context.Entry(tournament).State = EntityState.Modified;
+            var existingTournament = await unitOfWork.TournamentRepository.GetAsync(id);
+            if (existingTournament == null)
+            {
+                return NotFound();
+            }
+
+            existingTournament.Title = tournament.Title;
+            existingTournament.StartDate = tournament.StartDate;
+            //To do, update game list here
+            unitOfWork.TournamentRepository.Update(existingTournament);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await unitOfWork.CompleteAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -78,8 +90,8 @@ namespace TournamentAPI.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Tournament>> PostTournament(Tournament tournament)
         {
-            _context.Tournament.Add(tournament);
-            await _context.SaveChangesAsync();
+            unitOfWork.TournamentRepository.Add(tournament);
+            await unitOfWork.CompleteAsync();
 
             return CreatedAtAction("GetTournament", new { id = tournament.Id }, tournament);
         }
@@ -88,21 +100,21 @@ namespace TournamentAPI.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTournament(int id)
         {
-            var tournament = await _context.Tournament.FindAsync(id);
+            var tournament = await unitOfWork.TournamentRepository.GetAsync(id);
             if (tournament == null)
             {
                 return NotFound();
             }
 
-            _context.Tournament.Remove(tournament);
-            await _context.SaveChangesAsync();
+           unitOfWork.TournamentRepository.Remove(tournament);
+            await unitOfWork.CompleteAsync();
 
             return NoContent();
         }
 
         private bool TournamentExists(int id)
         {
-            return _context.Tournament.Any(e => e.Id == id);
+            return unitOfWork.TournamentRepository.AnyAsync(id).Result;
         }
     }
 }

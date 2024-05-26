@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TournamentAPI.Api.Extensions;
 using TournamentAPI.Core.Repositories;
 using TournamentAPI.Data.Data;
+using TournamentAPI.Data.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<TournamentAPIApiContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("TournamentAPIApiContext") ?? throw new InvalidOperationException("Connection string 'TournamentAPIApiContext' not found.")));
@@ -16,7 +17,7 @@ builder.Services.AddControllers(opt => opt.ReturnHttpNotAcceptable = true)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<IUnitOfWork,IUnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
 await app.SeedDataAsync();

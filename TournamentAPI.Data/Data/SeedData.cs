@@ -15,7 +15,7 @@ namespace TournamentAPI.Data.Data
         private static Random random = new Random();
         public static async Task InitAsync(TournamentAPIApiContext context)
         {
-            if (await context.Tournament.AnyAsync()) return;
+            if (await context.Tournaments.AnyAsync()) return;
 
             faker = new Faker();
 
@@ -28,7 +28,7 @@ namespace TournamentAPI.Data.Data
                     StartDate = faker.Date.Past(),
                     Games = new List<Game>()
                 };
-                await context.Tournament.AddAsync(tournament);
+                await context.Tournaments.AddAsync(tournament);
                 await context.SaveChangesAsync();
                 for (int j = 0; j < faker.Random.Int(1, 11); j++)
                 {
@@ -38,7 +38,7 @@ namespace TournamentAPI.Data.Data
                         Time = faker.Date.Between(tournament.StartDate, tournament.StartDate.AddDays(10)),
                         TournamentId = tournament.Id
                     };
-                    await context.Game.AddAsync(Game);
+                    await context.Games.AddAsync(Game);
                     await context.SaveChangesAsync();
                 }
 

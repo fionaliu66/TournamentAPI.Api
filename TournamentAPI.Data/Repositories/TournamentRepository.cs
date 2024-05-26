@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,32 +18,33 @@ namespace TournamentAPI.Data.Repositories
         }
         public void Add(Tournament tournament)
         {
-            throw new NotImplementedException();
+            _context.Tournaments.Add(tournament);
         }
 
-        public Task<bool> AnyAsync(int id)
+        public  Task<bool> AnyAsync(int id)
         {
-            throw new NotImplementedException();
+            return _context.Tournaments.AnyAsync(t => t.Id == id);
         }
 
-        public Task<IEnumerable<Tournament>> GetAllAsync()
+        public async Task<IEnumerable<Tournament>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _context.Tournaments.ToListAsync();
         }
 
-        public Task<Tournament> GetAsync(int id)
+        public async Task<Tournament> GetAsync(int id)
         {
-            throw new NotImplementedException();
+            //handel null here
+            return await _context.Tournaments.FindAsync(id);
         }
 
         public void Remove(Tournament tournament)
         {
-            throw new NotImplementedException();
+             _context.Tournaments.Remove(tournament);
         }
 
         public void Update(Tournament tournament)
         {
-            throw new NotImplementedException();
+            _context.Entry(tournament).State = EntityState.Modified;
         }
     }
 }

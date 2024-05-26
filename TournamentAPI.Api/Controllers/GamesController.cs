@@ -16,7 +16,7 @@ namespace TournamentAPI.Api.Controllers
     [ApiController]
     public class GamesController : ControllerBase
     {
-        private UnitOfWork unitOfWork;
+        private readonly UnitOfWork unitOfWork;
 
         public GamesController(TournamentAPIApiContext context)
         {
@@ -42,7 +42,7 @@ namespace TournamentAPI.Api.Controllers
                 return NotFound();
             }
 
-            return game;
+            return Ok(game);
         }
 
         // PUT: api/Games/5
@@ -52,18 +52,36 @@ namespace TournamentAPI.Api.Controllers
         {
             if (id != game.Id)
             {
-                return BadRequest();
+                return BadRequest("ID in URL does not match ID in the body.");
+
             }
 
-            // _context.Entry(game).State = EntityState.Modified;
-            var gameToPut = unitOfWork.GameRepository.GetAsync(id);
-            if (gameToPut == null) return NotFound();
-            var gameToUpdate = await gameToPut;
-            gameToUpdate.Title = game.Title;
-            gameToUpdate.Time = game.Time;
-            unitOfWork.GameRepository.Update(gameToUpdate);
-            await unitOfWork.CompleteAsync();
-            return Ok(gameToUpdate);
+            var existingGame = await unitOfWork.GameRepository.GetAsync(id);
+            if(existingGame == null)
+            {
+                return NotFound();
+            }
+            existingGame.Title = game.Title;
+            existingGame.Time = game.Time;
+            unitOfWork.GameRepository.Update(existingGame);
+
+            try
+            {
+                await unitOfWork.CompleteAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!GameExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
         // POST: api/Games
@@ -71,6 +89,11 @@ namespace TournamentAPI.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Game>> PostGame(Game game)
         {
+            var tournamentExists = await unitOfWork.TournamentRepository.AnyAsync(game.TournamentId);
+            if (!tournamentExists)
+            {
+                return BadRequest("Invalid TournamentId");
+            }
             unitOfWork.GameRepository.Add(game);
             await unitOfWork.CompleteAsync();
 
@@ -93,9 +116,9 @@ namespace TournamentAPI.Api.Controllers
             return NoContent();
         }
 
-        private async Task<bool> GameExists(int id)
+        private bool GameExists(int id)
         {
-            return await unitOfWork.GameRepository.AnyAsync(id);
+            return  unitOfWork.GameRepository.AnyAsync(id).Result;
         }
     }
 }

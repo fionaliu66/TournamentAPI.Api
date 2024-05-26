@@ -16,6 +16,8 @@ namespace TournamentAPI.Data.Repositories
         public UnitOfWork(TournamentAPIApiContext context)
         {
             _context = context;
+            _tournamentRepo = new TournamentRepository(_context);
+            _gameRepo = new GameRepository(_context);
         }
 
         public ITournamentRepository TournamentRepository
