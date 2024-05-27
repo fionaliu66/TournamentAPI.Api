@@ -10,7 +10,9 @@ using TournamentAPI.Data.Repositories;
 using TournamentAPI.Core.Entities;
 using TournamentAPI.Core.Repositories;
 using AutoMapper;
-
+using TournamentAPI.Core.Dto;
+using Azure;
+using Microsoft.AspNetCore.JsonPatch;
 namespace TournamentAPI.Api.Controllers
 {
     [Route("api/[controller]")]
@@ -27,10 +29,10 @@ namespace TournamentAPI.Api.Controllers
 
         // GET: api/Games
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Game>>> GetGame()
+        public async Task<ActionResult<IEnumerable<Game>>> GetGame(string title)
         {
             var games =  await unitOfWork.GameRepository.GetAllAsync();
-            if(games == null)
+            if(games == null || !games.Any()) 
             {
                 return NotFound();
             }
@@ -119,7 +121,28 @@ namespace TournamentAPI.Api.Controllers
             var GameDto = _mapper.Map<Game>(game);
             return CreatedAtAction(nameof(GetGame), new { id = game.Id }, GameDto);
         }
-
+        [HttpPatch("{id}")]
+        public async Task<ActionResult<GameDto>> PatchGame(int id, JsonPatchDocument<GameDto> patchDocument)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!GameExists(id))
+            {
+                return NotFound();
+            }
+            var gameEntity = await unitOfWork.GameRepository.GetAsync(id);
+            var gameToPatch = _mapper.Map<GameDto>(gameEntity);
+            patchDocument.ApplyTo(gameToPatch, ModelState);
+            if (!TryValidateModel(gameToPatch))
+            {
+                return BadRequest(ModelState);
+            }
+            _mapper.Map(gameToPatch, gameEntity);
+            await unitOfWork.CompleteAsync();
+            return NoContent();
+        }
         // DELETE: api/Games/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteGame(int id)

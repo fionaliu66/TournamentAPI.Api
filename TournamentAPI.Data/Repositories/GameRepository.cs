@@ -42,6 +42,10 @@ namespace TournamentAPI.Data.Repositories
         {         //how to handle null here
                 return await _context.Games.FindAsync(id)!;                 
         }
+        public async Task<IEnumerable<Game>> GetAllAsync(string title)
+        {
+            return await _context.Games.Where(g=> g.Title == title).ToListAsync();
+        }
 
         public void Update(Game game)
         {

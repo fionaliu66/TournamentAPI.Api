@@ -38,9 +38,9 @@ namespace TournamentAPI.Api.Controllers
 
         // GET: api/Tournaments/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Tournament>> GetTournament(int id)
+        public async Task<ActionResult<Tournament>> GetTournament(int id, bool includeMatchs)
         {
-            var tournament = await unitOfWork.TournamentRepository.GetAsync(id);
+            var tournament = await unitOfWork.TournamentRepository.GetAsync(id,includeMatchs);
 
             if (tournament == null)
             {
