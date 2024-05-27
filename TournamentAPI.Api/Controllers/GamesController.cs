@@ -9,6 +9,7 @@ using TournamentAPI.Data.Data;
 using TournamentAPI.Data.Repositories;
 using TournamentAPI.Core.Entities;
 using TournamentAPI.Core.Repositories;
+using AutoMapper;
 
 namespace TournamentAPI.Api.Controllers
 {
@@ -17,10 +18,11 @@ namespace TournamentAPI.Api.Controllers
     public class GamesController : ControllerBase
     {
         private readonly UnitOfWork unitOfWork;
-
-        public GamesController(TournamentAPIApiContext context)
+        private readonly IMapper _mapper;
+        public GamesController(TournamentAPIApiContext context, IMapper mapper)
         {
             unitOfWork = new UnitOfWork(context);
+            _mapper = mapper;
         }
 
         // GET: api/Games
@@ -28,7 +30,16 @@ namespace TournamentAPI.Api.Controllers
         public async Task<ActionResult<IEnumerable<Game>>> GetGame()
         {
             var games =  await unitOfWork.GameRepository.GetAllAsync();
-            return Ok(games);
+            if(games == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                var gamesDto = _mapper.Map<Game>(games);
+                return Ok(gamesDto);
+            }
+        
         }
 
         // GET: api/Games/5
@@ -41,8 +52,8 @@ namespace TournamentAPI.Api.Controllers
             {
                 return NotFound();
             }
-
-            return Ok(game);
+            var gameDto = _mapper.Map<Game>(game);
+            return Ok(gameDto);
         }
 
         // PUT: api/Games/5
@@ -80,6 +91,11 @@ namespace TournamentAPI.Api.Controllers
                     throw;
                 }
             }
+            catch (Exception ex)
+            {
+             
+                return StatusCode(500, "An error occurred while saving the game.");
+            }
 
             return NoContent();
         }
@@ -94,10 +110,14 @@ namespace TournamentAPI.Api.Controllers
             {
                 return BadRequest("Invalid TournamentId");
             }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             unitOfWork.GameRepository.Add(game);
             await unitOfWork.CompleteAsync();
-
-            return CreatedAtAction("GetGame", new { id = game.Id }, game);
+            var GameDto = _mapper.Map<Game>(game);
+            return CreatedAtAction(nameof(GetGame), new { id = game.Id }, GameDto);
         }
 
         // DELETE: api/Games/5

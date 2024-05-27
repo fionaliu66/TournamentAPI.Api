@@ -9,7 +9,10 @@ using TournamentAPI.Data.Data;
 using TournamentAPI.Core.Entities;
 using TournamentAPI.Data.Repositories;
 using TournamentAPI.Core.Repositories;
-
+using AutoMapper;
+using TournamentAPI.Core.Dto;
+using Azure;
+using Microsoft.AspNetCore.JsonPatch;
 namespace TournamentAPI.Api.Controllers
 {
     [Route("api/[controller]")]
@@ -17,10 +20,11 @@ namespace TournamentAPI.Api.Controllers
     public class TournamentsController : ControllerBase
     {
         private readonly UnitOfWork unitOfWork;
-
-        public TournamentsController(TournamentAPIApiContext context)
+        private readonly IMapper _mapper;
+        public TournamentsController(TournamentAPIApiContext context,IMapper mapper)
         {
             unitOfWork = new UnitOfWork(context);
+            _mapper = mapper;
         }
 
         // GET: api/Tournaments
@@ -28,7 +32,8 @@ namespace TournamentAPI.Api.Controllers
         public async Task<ActionResult<IEnumerable<Tournament>>> GetTournament()
         {
             var tournaments =  await unitOfWork.TournamentRepository.GetAllAsync();
-            return Ok(tournaments);
+            var tournamentsDto = _mapper.Map<IEnumerable<TournamentDto>>(tournaments);
+            return Ok(tournamentsDto);
         }
 
         // GET: api/Tournaments/5
@@ -41,8 +46,8 @@ namespace TournamentAPI.Api.Controllers
             {
                 return NotFound();
             }
-
-            return tournament;
+            var tournamentDto = _mapper.Map<TournamentDto>(tournament);
+            return Ok(tournamentDto);
         }
 
         // PUT: api/Tournaments/5
@@ -90,12 +95,41 @@ namespace TournamentAPI.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Tournament>> PostTournament(Tournament tournament)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             unitOfWork.TournamentRepository.Add(tournament);
             await unitOfWork.CompleteAsync();
 
-            return CreatedAtAction("GetTournament", new { id = tournament.Id }, tournament);
+            var tournamentDto = _mapper.Map<TournamentDto>(tournament); 
+            return CreatedAtAction(nameof(GetTournament), new { id = tournament.Id }, tournamentDto);
         }
 
+        [HttpPatch("{id}")]
+        public async Task<ActionResult<TournamentDto>> PatchTournament(int id,JsonPatchDocument<TournamentDto> patchDocument)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!TournamentExists(id))
+            {
+                return NotFound();
+            }
+            var tournamentEntity = await unitOfWork.TournamentRepository.GetAsync(id);
+            var tournamentToPatch = _mapper.Map<TournamentDto>(tournamentEntity);
+            patchDocument.ApplyTo(tournamentToPatch, ModelState);
+
+            if (!TryValidateModel(tournamentToPatch))
+            {
+                return BadRequest(ModelState);
+            }
+         
+              _mapper.Map(tournamentToPatch, tournamentEntity);
+            await unitOfWork.CompleteAsync();
+            return NoContent();
+        }
         // DELETE: api/Tournaments/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTournament(int id)
